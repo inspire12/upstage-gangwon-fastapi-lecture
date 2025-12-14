@@ -18,3 +18,13 @@ async def chat(message: ChatRequest,
     #     media_type="text/event-stream; charset=utf-8"
     # )
     return EventSourceResponse(chat_service.upstage_chat(message))
+
+@chat_router.post("/tools")
+def chat_with_tools(message: ChatRequest,
+               chat_service: ChatService = Depends(get_chat_service)):
+    # return StreamingResponse(
+    #     chat_service.upstage_chat(message),
+    #     # media_type="text/plain; charset=utf-8"
+    #     media_type="text/event-stream; charset=utf-8"
+    # )
+    return chat_service.upstage_chat_function_calling()

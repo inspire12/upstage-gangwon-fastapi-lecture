@@ -1,24 +1,47 @@
 import json
+import os
+from typing import Dict, Any
 
+import requests
+from dotenv import load_dotenv
 from openai import OpenAI
 
+# def get_current_weather(location, unit="fahrenheit"):
+#     """Get the current weather in a given location"""
+#     if unit is None:
+#         unit = "fahrenheit"
+#
+#     if "seoul" in location.lower():
+#         return json.dumps({"location": "Seoul", "temperature": "10", "unit": unit})
+#     elif "san francisco" in location.lower():
+#         return json.dumps(
+#             {"location": "San Francisco", "temperature": "72", "unit": unit}
+#         )
+#     elif "paris" in location.lower():
+#         return json.dumps({"location": "Paris", "temperature": "22", "unit": unit})
+#     else:
+#         return json.dumps({"location": location, "temperature": "unknown"})
+#
 
-def get_current_weather(location, unit="fahrenheit"):
-    """Get the current weather in a given location"""
-    if unit is None:
-        unit = "fahrenheit"
+load_dotenv()
 
-    if "seoul" in location.lower():
-        return json.dumps({"location": "Seoul", "temperature": "10", "unit": unit})
-    elif "san francisco" in location.lower():
-        return json.dumps(
-            {"location": "San Francisco", "temperature": "72", "unit": unit}
-        )
-    elif "paris" in location.lower():
-        return json.dumps({"location": "Paris", "temperature": "22", "unit": unit})
-    else:
-        return json.dumps({"location": location, "temperature": "unknown"})
+OPENWEATHER_API_KEY = os.getenv("OPENWEATHER_API_KEY", "")
+OPENWEATHER_BASE_URL = "https://api.openweathermap.org/data/3.0/weather"
 
+
+def get_current_weather(location, unit="celsius") -> dict:
+    resp = requests.get(
+        "https://api.openweathermap.org/data/2.5/weather",
+        params={
+            "q": location,
+            "units": unit,
+            "appid": OPENWEATHER_API_KEY,
+        },
+        timeout=5,
+    )
+    response = resp.json()
+    return json.dumps({"location": location, "temperature": response.get('main').get('temp'), "unit": unit})
+    # return resp.json()
 
 
 # Step 2: Send the query and available functions to the model
@@ -26,8 +49,8 @@ def run_conversation(client: OpenAI):
     messages = [
         {
             "role": "user",
-            # "content": "What's the weather like in San Francisco, Seoul, and Paris?",
-            "content": "한국에 서울, 경기도 성남 날씨는 어때?",
+            "content": "What's the weather like in Seoul, and Paris?",
+            # "content": "한국에 서울, 경기도 성남 날씨는 어때?",
         }
     ]
 

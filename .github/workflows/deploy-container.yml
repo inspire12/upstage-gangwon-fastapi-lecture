@@ -2,7 +2,7 @@ name: Build & Push Image (GHCR)
 
 on:
   push:
-    branches: [ "deploy/container" ]
+    branches: [ deploy/container ]
 
 jobs:
   build:

@@ -2,7 +2,7 @@ name: Build & Push Image (GHCR)
 
 on:
   push:
-    branches: [ "deploy/registry" ]
+    branches: [ deploy/registry ]
 
 jobs:
   build:
@@ -32,3 +32,13 @@ jobs:
             --platform linux/amd64,linux/arm64 \
             -t ghcr.io/${{ github.actor }}/$(basename ${{ github.repository }}):latest \
             --push .
+
+      - name: Deploy on K8s
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            cd /home/ubuntu/deploy/upstage-gangwon-fastapi-lecture/infra/k8s/application
+            kubectl apply -f 04-backend.yaml

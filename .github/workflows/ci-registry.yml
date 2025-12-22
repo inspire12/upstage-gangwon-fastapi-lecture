@@ -2,7 +2,7 @@ name: Build & Push Image (GHCR)
 
 on:
   push:
-    branches: [ "ci/registry" ]
+    branches: [ "deploy/ci-registry" ]
 
 jobs:
   build:

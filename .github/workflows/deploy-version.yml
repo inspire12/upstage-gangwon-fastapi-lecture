@@ -1,4 +1,4 @@
-name: Build & Version &Push Image (GHCR)
+name: Build & Version & Push Image (GHCR)
 
 on:
   push:
@@ -10,7 +10,7 @@ jobs:
 
     permissions:
       contents: read
-      packages: write   # GHCR push 필수
+      packages: write
 
     steps:
       - name: Checkout
@@ -26,22 +26,29 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Generate version tag
+      - name: Generate version tag (pyproject + git)
         id: version
         run: |
-          DATE=$(date +%Y%m%d)
-          # 같은 날짜의 빌드 번호 계산
-          EXISTING_TAGS=$(docker run --rm -e DOCKER_CLI_EXPERIMENTAL=enabled gcr.io/go-containerregistry/crane:latest ls ghcr.io/${{ github.actor }}/$(basename ${{ github.repository }}) | grep "^${DATE}-" | wc -l || echo "0")
-          BUILD_NUMBER=$((EXISTING_TAGS + 1))
-          VERSION_TAG="${DATE}-${BUILD_NUMBER}"
-          echo "version_tag=${VERSION_TAG}" >> $GITHUB_OUTPUT
+          set -euo pipefail
+
+          # pyproject.toml 에서 version 추출
+          PYPROJECT_VERSION=$(grep '^version' pyproject.toml | cut -d '"' -f2)
+
+          # git commit short hash
+          GIT_SHA=$(git rev-parse --short=7 HEAD)
+
+          VERSION_TAG="${PYPROJECT_VERSION}-${GIT_SHA}"
+
+          echo "version_tag=${VERSION_TAG}" >> "$GITHUB_OUTPUT"
           echo "Generated version: ${VERSION_TAG}"
 
       - name: Build & Push
         run: |
-          IMAGE_NAME="ghcr.io/${{ github.actor }}/$(basename ${{ github.repository }})"
+          set -euo pipefail
+
+          IMAGE_NAME="ghcr.io/inspire12/upstage-gangwon-fastapi-lecture"
           VERSION_TAG="${{ steps.version.outputs.version_tag }}"
-          
+
           docker buildx build \
             --platform linux/amd64,linux/arm64 \
             -t "${IMAGE_NAME}:${VERSION_TAG}" \
@@ -55,15 +62,14 @@ jobs:
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
+            set -euo pipefail
+
             VERSION_TAG="${{ steps.version.outputs.version_tag }}"
-            
+
             cd /home/ubuntu/deploy/upstage-gangwon-fastapi-lecture/infra/k8s/application
-            
-            # 임시로 04-backend.yaml을 수정하여 버전 태그 적용
+
             sed -i "s|image: ghcr.io/inspire12/upstage-gangwon-fastapi-lecture:.*|image: ghcr.io/inspire12/upstage-gangwon-fastapi-lecture:${VERSION_TAG}|g" 04-backend.yaml
             sed -i "s|value: \".*\"|value: \"${VERSION_TAG}\"|g" 04-backend.yaml
-            
+
             kubectl apply -f 04-backend.yaml
-            
-            # 배포 후 원본으로 복원
             git checkout 04-backend.yaml

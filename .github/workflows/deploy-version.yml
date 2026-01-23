@@ -65,8 +65,22 @@ jobs:
             set -euo pipefail
 
             VERSION_TAG="${{ steps.version.outputs.version_tag }}"
+            IMAGE_NAME="ghcr.io/${{ github.repository_owner }}/gangwon-ning"
+            REPO_DIR="/home/ubuntu/workspace/deploy/upstage-gangwon-fastapi-lecture"
+            REPO_URL="https://github.com/${{ github.repository }}.git"
 
-            cd /home/ubuntu/workspace/deploy/upstage-gangwon-fastapi-lecture/infra/k8s/application
+            # Ensure repo exists with infra manifests
+            if [ ! -d "${REPO_DIR}/.git" ]; then
+              mkdir -p "$(dirname "${REPO_DIR}")"
+              git clone "${REPO_URL}" "${REPO_DIR}"
+            fi
+
+            cd "${REPO_DIR}"
+            git fetch --all --prune
+            git checkout deploy/version
+            git pull --ff-only
+
+            cd "${REPO_DIR}/infra/k8s/application"
 
             sed -i "s|image: ${IMAGE_NAME}:.*|image: ${IMAGE_NAME}:${VERSION_TAG}|g" 04-backend.yaml
             sed -i "s|value: \".*\"|value: \"${VERSION_TAG}\"|g" 04-backend.yaml
